@@ -111,11 +111,11 @@ class TwoLayerNet(object):
         loss += 0.5*self.reg*(np.sum(self.params['W2']*self.params['W2'])
                               + np.sum(self.params['W1']*self.params['W1']))
         
-        dx, grads['W2'], grads['b2'] = affine_backward(dx, cache2)
+        dx, grads['W2'],grads['b2'] = affine_backward(dx, cache2)
         grads['W2'] += self.reg * self.params['W2']
         _, grads['W1'], grads['b1'] = affine_relu_backward(dx,cache1)
-        print('shape of W1',self.params['W1'].shape)
-        print('shape of dW1',grads['W1'].shape)
+        #print('shape of W1',self.params['W1'].shape)
+        #print('shape of dW1',grads['W1'].shape)
         grads['W1'] += self.reg * self.params['W1'] 
         ############################################################################
         #                             END OF YOUR CODE                             #

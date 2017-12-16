@@ -68,9 +68,10 @@ def affine_backward(dout, cache):
     
     for k in x.shape[1:]:
         newshape *= k
-        
+    
     dx = np.dot(dout,w.T).reshape(x.shape)
     dw = np.dot(x.reshape(N,newshape).T,dout)
+    
     db = np.sum(dout,axis = 0)
     
     
@@ -120,9 +121,9 @@ def relu_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
-    
-    dx = dout.reshape(x.shape) * [x > 0]
-    
+
+    dx = dout
+    dx[x < 0] = 0
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
