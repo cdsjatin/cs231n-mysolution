@@ -182,7 +182,11 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
-        pass
+        
+        # INITIALIZATION
+        
+       
+        
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
