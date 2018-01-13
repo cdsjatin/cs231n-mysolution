@@ -29,11 +29,9 @@ def affine_forward(x, w, b):
     for k in x.shape[1:]:
         newshape *= k
     
-    N = x.shape[0]
-    
     #print('w shape',w.shape)
     #print('x shape',x.shape)
-    out = np.dot(x.reshape(N,newshape),w) + b
+    out = np.dot(x.reshape(x.shape[0],newshape),w) + b
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -195,7 +193,13 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variables.                                                          #
         #######################################################################
         
-        pass
+        sample_mean = np.mean(x)
+        sample_var = np.var(x)
+        
+        x = (x-sample_mean) / np.sqrt(sample_var)
+        
+        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        running_var = momentum * running_var + (1 - momentum) * sample_var
         
         #######################################################################
         #                           END OF YOUR CODE                          #
@@ -207,13 +211,18 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-        pass
+        
+        x = (x - running_mean) / np.sqrt(running_var)
+        x = (np.sqrt(gamma) * x) + beta
+        
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
     else:
         raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
-
+    
+    out = x
+    cache = (running_mean,running_var)
     # Store the updated running means back into bn_param
     bn_param['running_mean'] = running_mean
     bn_param['running_var'] = running_var
