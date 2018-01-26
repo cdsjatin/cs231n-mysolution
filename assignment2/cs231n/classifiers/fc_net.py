@@ -131,7 +131,7 @@ class FullyConnectedNet(object):
     dropout and batch normalization as options. For a network with L layers,
     the architecture will be
 
-    {affine - [batch norm] - relu - [dropout]} x (L - 1) - affine - softmax
+    
 
     where batch normalization and dropout are optional, and the {...} block is
     repeated L - 1 times.
@@ -229,6 +229,7 @@ class FullyConnectedNet(object):
         # behave differently during training and testing.
         if self.use_dropout:
             self.dropout_param['mode'] = mode
+            
         if self.use_batchnorm:
             for bn_param in self.bn_params:
                 bn_param['mode'] = mode
@@ -248,13 +249,37 @@ class FullyConnectedNet(object):
         # When using batch normalization, you'll need to pass self.bn_params[0] to #
         # the forward pass for the first batch normalization layer, pass           #
         # self.bn_params[1] to the forward pass for the second batch normalization #
-        # layer, etc.                                                              #
+        # layer, etc.     
+        #
+        # {affine - [batch norm] - relu - [dropout]} x (L - 1) - affine - softmax
         ############################################################################
+
+        cache_affine = {}
+        cache_bnorm = {}
+        cache_relu = {}
+        
+        layer_affine = {}
+        layer_bnorm = {}
+        layer_relu = {}
+        
         
         for i in range(1, self.num_layers):
-            layer[i],cache_layer[i] = affine_relu_forward(layer[i-1],
-                                                          self.params['W'+str(i)],
-                                                          self.params['b'+str(i)])
+            
+            gamma = np.ones(layer[i-1].shape)
+            beta = np.zeros(layer[i-1].shape)
+            
+            layer_affine[i],cache_affine[i] = affine_forward(layer[i-1],self.params['W'+str(i)],self.params['b'+str(i)])
+            layer_bnorm[i],cache_bnorm[i] = batchnorm_forward(layer_affine[i],gamma,beta,bn_param[i-1])
+            layer_relu[i],cache_relu[i] = relu_forward(layer_bnorm[i])
+            
+            layer[i] = layer_relu[i]
+            #layer[i-1],_ = batchnorm_forward(layer[i-1], gamma, beta, bn_param[i-1])
+            #layer[i],cache_layer[i] = affine_relu_forward(layer[i-1],
+                                                          #self.params['W'+str(i)],
+                                                          #self.params['b'+str(i)])
+                    
+             
+        
         
         scores, cache_scores = affine_forward(layer[self.num_layers - 1],
                                               self.params['W'+str(self.num_layers)],
@@ -286,15 +311,25 @@ class FullyConnectedNet(object):
         loss, d_scores = softmax_loss(scores,y)
         dx = {}
         
-        for i in range(1,self.num_layers +1):
+        dx_relu = {}
+        dx_bnorm = {}
+        N = self.num_layers
+        
+        for i in range(1,N +1):
             loss += 0.5*self.reg*(np.sum(self.params['W'+str(i)]*self.params['W'+str(i)]))
         
-        dx[self.num_layers], grads['W'+str(self.num_layers)],grads['b'+str(self.num_layers)] = affine_backward(d_scores, cache_scores)
         
-        grads['W'+str(self.num_layers)] += self.reg * self.params['W'+str(self.num_layers)]
+        dx[N], grads['W'+str(N)],grads['b'+str(N)] = affine_backward(d_scores, cache_scores)
         
-        for i in reversed(range(1,self.num_layers)):    
-            dx[i], grads['W'+str(i)], grads['b'+str(i)] = affine_relu_backward(dx[i+1],cache_layer[i])
+        grads['W'+str(N)] += self.reg * self.params['W'+str(N)]
+        
+   
+        for i in reversed(range(1,N)):
+            dx_relu[i] = relu_backward(dx[i+1],cache_relu[i])
+            dx_bnorm[i],_,_ = batchnorm_backward(dx_relu[i],cache_bnorm[i])
+            
+            #dx[i], grads['W'+str(i)], grads['b'+str(i)] = affine_relu_backward(dx[i+1],cache_layer[i])
+            
             grads['W'+str(i)] += self.reg * self.params['W'+str(i)] 
                                                           
                                                           

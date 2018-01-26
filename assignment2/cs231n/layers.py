@@ -128,12 +128,11 @@ def relu_backward(dout, cache):
     ###########################################################################
     return dx
 
-
 def batchnorm_forward(x, gamma, beta, bn_param):
     """
     Forward pass for batch normalization.
 
-    During training the sample mean and (uncorrected) sample variance are
+    During training the sample mean and (uncorrected) sample variance area
     computed from minibatch statistics and used to normalize the incoming data.
     During training we also keep an exponentially decaying running mean of the
     mean and variance of each feature, and these averages are used to normalize
@@ -176,6 +175,10 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     running_var = bn_param.get('running_var', np.zeros(D, dtype=x.dtype))
 
     out, cache = None, None
+    cache = {}
+    sample_mean = np.mean(x, axis = 0)
+    sample_var = np.var(x, axis = 0)
+    
     if mode == 'train':
         #######################################################################
         # TODO: Implement the training-time forward pass for batch norm.      #
@@ -192,15 +195,17 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variance, storing your result in the running_mean and running_var   #
         # variables.                                                          #
         #######################################################################
+        xz = x - sample_mean
+        xstd = np.sqrt(sample_var + eps)
         
-        sample_mean = np.mean(x, axis = 0)
-        sample_var = np.var(x, axis = 0)
+        xn = xz / xstd
         
-        xn = (x-sample_mean) / np.sqrt(sample_var)
-        x = (gamma * xn) + beta
+        out = (gamma * xn) + beta
         
         running_mean = momentum * running_mean + (1 - momentum) * sample_mean
         running_var = momentum * running_var + (1 - momentum) * sample_var
+        
+        cache['xstd'] = xstd
         
         #######################################################################
         #                           END OF YOUR CODE                          #
@@ -213,8 +218,10 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # Store the result in the out variable.                               #
         #######################################################################
         
-        xn = (x - running_mean) / np.sqrt(running_var)
-        x = (gamma * xn) + beta
+        xz = x - running_mean
+        xstd = np.sqrt(running_var)
+        xn = xz / xstd 
+        out = (gamma * xn) + beta
         
         #######################################################################
         #                          END OF YOUR CODE                           #
@@ -222,12 +229,13 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     else:
         raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
     
-    out = x
-    cache = {}
     cache = {
+        'mode': mode,
+        'xz': xz,
+        'xstd': xstd,
+        'x': out,
         'xn': xn,
         'gamma': gamma,
-        'beta': beta,
         'running_mean': running_mean,
         'running_var': running_var
         }
@@ -255,18 +263,59 @@ def batchnorm_backward(dout, cache):
     - dgamma: Gradient with respect to scale parameter gamma, of shape (D,)
     - dbeta: Gradient with respect to shift parameter beta, of shape (D,)
     """
+    N = cache['xn'].shape[0]    
+    xn = cache['xn'] # x normalized
+    gamma = cache['gamma']
+    
     dx, dgamma, dbeta = None, None, None
     ###########################################################################
     # TODO: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
     ###########################################################################
-    
-    dbeta = np.sum(dout,axis = 0)
-    dz = dbeta * np.ones(cache['xn'].shape)
-    dgamma = np.sum(dbeta * cache['xn'],axis = 0)
-    dxn = cache['gamma'] * dz
-    
-    dx = dxn * np.sqrt(cache['running_var']) - cache['running_mean']
+    if(cache['mode'] == "train"):
+        
+        xz = cache['xz']
+        xstd = cache['xstd']
+        
+        # 1 step
+        # gradient on beta axes
+        dbeta = np.sum(dout,axis = 0)
+
+        # 2 step
+        # gradient on gamma axes
+        dgamma = np.sum(dout*xn,axis = 0)
+
+        # gradient along xn axis 
+        dxn = gamma * dout
+
+        # 3 step
+        # gradient along xz axes 
+        dxz1 = dxn * (xstd ** -1)
+
+        # 3.1 step - along the xz2 axes
+        # grad along std axes
+        dstd = -np.sum((dxn*xz) * (xstd ** -2),axis=0)
+        # grad along varE axes
+        dvare = 0.5 * dstd * (xstd ** -1)
+        # dvar = dvare
+        # grad along xz axes
+        dxz2 = (2./N) * dvare * xz 
+
+        # 3.2 along the xz axes
+        dxz = dxz2 + dxz1
+
+        # along mean axes
+        dmean = np.sum(dxz, axis = 0)
+        dx2 = -dmean / N
+        dx1 = dxz
+
+        # 3.3 step along x FINALLY !!
+        dx = dx1 + dx2
+    else:
+        dbeta = np.sum(dout,axis = 0)
+        dgamma = np.sum(dout*xn,axis = 0)
+        dxn = gamma * dout
+        dx = dxn / np.sqrt(cache['running_var'])
     
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -297,7 +346,11 @@ def batchnorm_backward_alt(dout, cache):
     # should be able to compute gradients with respect to the inputs in a     #
     # single statement; our implementation fits on a single 80-character line.#
     ###########################################################################
-    pass
+    xn = cache['xn']
+    dbeta = np.sum(dout,axis=0)
+    dgamma = np.sum(dout*xn,axis=0)
+    
+    dx = np.zeros(xn.shape)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
