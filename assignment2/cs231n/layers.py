@@ -172,7 +172,6 @@ def batchnorm_forward(x, gamma, beta, bn_param):
 
     N, D = x.shape
     running_mean = bn_param.get('running_mean', np.zeros(D, dtype=x.dtype))
-    running_var = bn_param.get('running_var', np.zeros(D, dtype=x.dtype))
 
     out, cache = None, None
     cache = {}
@@ -202,6 +201,9 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         
         out = (gamma * xn) + beta
         
+        #print(running_mean.shape)
+        #print(running_var.shape)
+        
         running_mean = momentum * running_mean + (1 - momentum) * sample_mean
         running_var = momentum * running_var + (1 - momentum) * sample_var
         
@@ -219,7 +221,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         
         xz = x - running_mean
-        xstd = np.sqrt(running_var)
+        xstd = np.sqrt(running_var + eps)
         xn = xz / xstd 
         out = (gamma * xn) + beta
         
@@ -236,13 +238,13 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         'x': out,
         'xn': xn,
         'gamma': gamma,
-        'running_mean': running_mean,
-        'running_var': running_var
         }
     # Store the updated running means back into bn_param
     bn_param['running_mean'] = running_mean
     bn_param['running_var'] = running_var
-
+    
+    cache['bn_param'] = bn_param
+    
     return out, cache
 
 
@@ -315,7 +317,7 @@ def batchnorm_backward(dout, cache):
         dbeta = np.sum(dout,axis = 0)
         dgamma = np.sum(dout*xn,axis = 0)
         dxn = gamma * dout
-        dx = dxn / np.sqrt(cache['running_var'])
+        dx = dxn / np.sqrt(cache['bn_param']['running_var'])
     
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -389,7 +391,11 @@ def dropout_forward(x, dropout_param):
         # TODO: Implement training phase forward pass for inverted dropout.   #
         # Store the dropout mask in the mask variable.                        #
         #######################################################################
-        pass
+        
+        mask = np.ones(x.shape) / p
+        mask[np.random.rand(x.shape[0],x.shape[1]) <p] = 0
+        out = mask*x
+        
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -397,7 +403,9 @@ def dropout_forward(x, dropout_param):
         #######################################################################
         # TODO: Implement the test phase forward pass for inverted dropout.   #
         #######################################################################
-        pass
+        
+        out = x
+        
         #######################################################################
         #                            END OF YOUR CODE                         #
         #######################################################################
@@ -424,7 +432,7 @@ def dropout_backward(dout, cache):
         #######################################################################
         # TODO: Implement training phase backward pass for inverted dropout   #
         #######################################################################
-        pass
+        dx = dout * mask
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
