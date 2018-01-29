@@ -480,19 +480,20 @@ def conv_forward_naive(x, w, b, conv_param):
     x_padded = np.zeros(shape=(N,C,H+2*pad,W+2*pad))
     
     # Padding x on the last two axis
-    for n in range(0,N):
-        for c in range(0,C):
-            x_padded[n,c,:,:] = np.pad(x[n,c,:,:],pad,'constant')
+    for n in range(N):
+        for c in range(C):
+            x_padded[n,c,:,:] = np.pad(x[n,c,:,:],pad,mode='constant',constant_values=0)
    
-    H_dash = 1 + (H + 2*pad - HH) / stride
-    W_dash = 1 + (W + 2*pad - WW) / stride
+    H_dash = int(1 + (H + 2*pad - HH) / stride)
+    W_dash = int(1 + (W + 2*pad - WW) / stride)
     
-    out = np.zeros(N,F,H_dash,W_dash)
+    out = np.zeros((N,F,H_dash,W_dash))
     
-    for f in range(0,F):
-        for h in range(0,H_dash):
-            for w in range(0,W_dash):
-                out[n,f,h,w] = np.sum(x[n,:,0+:HH-1,]*w)
+    for nn in range(0,N): # nuber of images
+        for ff in range(0,F): # number of filters
+            for hh in range(0,H_dash): # height 
+                for ww in range(0,W_dash): # width activation map
+                    out[nn,ff,hh,ww] = np.sum(x_padded[nn,:,hh*stride:(hh*stride)+HH,(ww*stride):(ww*stride)+WW]*w[ff,:,:,:]) + b[ff]
     
     ###########################################################################
     #                             END OF YOUR CODE                            #
