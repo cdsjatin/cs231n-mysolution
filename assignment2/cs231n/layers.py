@@ -446,8 +446,10 @@ def conv_forward_naive(x, w, b, conv_param):
     A naive implementation of the forward pass for a convolutional layer.
 
     The input consists of N data points, each with C channels, height H and
-    width W. We convolve each input with F different filters, where each filter
-    spans all C channels and has height HH and width HH.
+    width W. 
+    
+    We convolve each input with F different filters, where each filter
+    spans all C channels and has height HH and width WW.
 
     Input:
     - x: Input data of shape (N, C, H, W)
@@ -469,7 +471,29 @@ def conv_forward_naive(x, w, b, conv_param):
     # TODO: Implement the convolutional forward pass.                         #
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
-    pass
+    N,C,H,W = x.shape
+    F,C,HH,WW = w.shape
+    
+    stride = conv_param['stride']
+    pad = conv_param['pad']
+    
+    x_padded = np.zeros(shape=(N,C,H+2*pad,W+2*pad))
+    
+    # Padding x on the last two axis
+    for n in range(0,N):
+        for c in range(0,C):
+            x_padded[n,c,:,:] = np.pad(x[n,c,:,:],pad,'constant')
+   
+    H_dash = 1 + (H + 2*pad - HH) / stride
+    W_dash = 1 + (W + 2*pad - WW) / stride
+    
+    out = np.zeros(N,F,H_dash,W_dash)
+    
+    for f in range(0,F):
+        for h in range(0,H_dash):
+            for w in range(0,W_dash):
+                out[n,f,h,w] = np.sum(x[n,:,0+:HH-1,]*w)
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
