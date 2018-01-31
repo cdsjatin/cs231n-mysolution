@@ -480,9 +480,9 @@ def conv_forward_naive(x, w, b, conv_param):
     x_padded = np.zeros(shape=(N,C,H+2*pad,W+2*pad))
     
     # Padding x on the last two axis
-    for n in range(N):
-        for c in range(C):
-            x_padded[n,c,:,:] = np.pad(x[n,c,:,:],pad,mode='constant',constant_values=0)
+    #for n in range(N):
+        #for c in range(C):
+    x_padded = np.pad(x,pad_width=[(0,),(0,),(pad,),(pad,)],mode='constant',constant_values=0)
    
     H_dash = int(1 + (H + 2*pad - HH) / stride)
     W_dash = int(1 + (W + 2*pad - WW) / stride)
@@ -519,7 +519,45 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
-    pass
+    
+    N,F,H_dash,W_dash = dout.shape
+    x,w,b,conv_param = cache
+    
+    stride,pad = conv_param['stride'],conv_param['pad']
+    N,C,H,W = x.shape
+    F,C,HH,WW = w.shape
+    
+    x_pad = np.pad(x,pad_width=[(0,),(0,),(pad,),(pad,)],mode='constant',constant_values=0)
+    
+    dw = np.zeros(w.shape)
+    db = np.zeros(b.shape)
+    dx = np.zeros(x.shape)
+    
+    dx_pad = np.zeros(x_pad.shape)
+    #x_t_pad = np.zeros((C,HH,WW))
+    
+    # backpropagation error in b axes
+    for n in range(N):
+        for f in range(F):
+            db[f] += np.sum(dout[n,f,:,:])
+    
+    # Backpropagation error in w axes 
+    for n in range(N):
+        for f in range(F):
+            for hh in range(H_dash):
+                for ww in range(W_dash):
+                    x_t_pad = x_pad[n,:,hh*stride:hh*stride+HH,ww*stride:ww*stride+WW]
+                    dw[f,:,:,:] += dout[n,f,hh,ww]*x_t_pad
+                    
+    # Backpropagation error in x_pad axes 
+    for n in range(N):
+        for f in range(F):
+            for hh in range(H_dash):
+                for ww in range(W_dash):
+                    dx_pad[n,:,hh*stride:hh*stride+HH,ww*stride:ww*stride+WW] += dout[n,f,hh,ww]*w[f,:,:,:]
+    
+    # # Backpropagation error in x axes, dropping padded errors 
+    dx[:,:,:,:] = dx_pad[:,:,pad:H+pad,pad:W+pad]
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -545,7 +583,23 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # TODO: Implement the max pooling forward pass                            #
     ###########################################################################
-    pass
+    
+    N,C,H,W = x.shape
+    pool_height,pool_width = pool_param['pool_height'],pool_param['pool_width']
+    stride = pool_param['stride']
+    
+    H_dash = int(1 + (H-pool_height)/stride)
+    W_dash = int(1 + (W-pool_height)/stride)
+    
+    out = np.zeros((N,C,H_dash,W_dash))
+    
+    for n in range(N):
+        for c in range(C):
+            for hh in range(H_dash):
+                for ww in range(W_dash):
+                    out[n,c,hh,ww] = np.max(x[n,c,hh*stride:hh*stride+pool_height,ww*stride:ww*stride+pool_width])
+               
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
