@@ -619,10 +619,28 @@ def max_pool_backward_naive(dout, cache):
     - dx: Gradient with respect to x
     """
     dx = None
+    x,pool_param = cache       
     ###########################################################################
     # TODO: Implement the max pooling backward pass                           #
     ###########################################################################
-    pass
+    N,C,H,W = x.shape
+    pool_height,pool_width = pool_param['pool_height'],pool_param['pool_width']
+    stride = pool_param['stride']
+    
+    H_dash = int(1 + (H-pool_height)/stride)
+    W_dash = int(1 + (W-pool_height)/stride)
+    
+    dx = np.zeros((N,C,H,W))
+
+    for n in range(N):
+        for c in range(C):
+            for hh in range(H_dash):
+                for ww in range(W_dash):
+                            fltr = x[n,c,hh*stride:hh*stride+pool_height,ww*stride:ww*stride+pool_width]
+                            new_fltr = fltr == np.max(fltr)
+                            dx[n,c,hh*stride:hh*stride+pool_height,ww*stride:ww*stride+pool_width] = dout[n,c,hh,ww]*new_fltr
+                
+              
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
