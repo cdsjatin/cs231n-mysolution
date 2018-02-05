@@ -172,7 +172,9 @@ def batchnorm_forward(x, gamma, beta, bn_param):
 
     N, D = x.shape
     running_mean = bn_param.get('running_mean', np.zeros(D, dtype=x.dtype))
-
+    running_var = bn_param.get('running_var', np.ones(D, dtype=x.dtype))
+        
+    
     out, cache = None, None
     cache = {}
     sample_mean = np.mean(x, axis = 0)
@@ -671,6 +673,7 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     """
     out, cache = None, None
 
+
     ###########################################################################
     # TODO: Implement the forward pass for spatial batch normalization.       #
     #                                                                         #
@@ -678,7 +681,15 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     # version of batch normalization defined above. Your implementation should#
     # be very short; ours is less than five lines.                            #
     ###########################################################################
-    pass
+    
+    N, C, H, W = x.shape
+    x_t = np.swapaxes(x,1,3)
+    x_t = x_t.reshape((N*H*W,-1)) # -1 will do automatic inferration
+    
+    out_t , cache = batchnorm_forward(x_t, gamma, beta, bn_param)
+    
+    out = out_t.reshape((N,W,H,C))
+    out = out.swapaxes(1,3)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -708,7 +719,16 @@ def spatial_batchnorm_backward(dout, cache):
     # version of batch normalization defined above. Your implementation should#
     # be very short; ours is less than five lines.                            #
     ###########################################################################
-    pass
+    
+    N, C, H, W = dout.shape
+    dout_t = np.swapaxes(dout,1,3)
+    dout_t = dout_t.reshape((N*W*H,-1))
+    
+    dx, dgamma, dbeta = batchnorm_backward(dout_t, cache)
+    
+    dx = dx.reshape((N,W,H,C))
+    dx = dx.swapaxes(1,3)
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
