@@ -26,7 +26,7 @@ class CaptioningRNN(object):
         Inputs:
         - word_to_idx: A dictionary giving the vocabulary. It contains V entries,
           and maps each string to a unique integer in the range [0, V).
-        - input_dim: Dimension D of input image feature vectors.
+        - input_dim: Dimension D of input image feature vectors. 
         - wordvec_dim: Dimension W of word vectors.
         - hidden_dim: Dimension H for the hidden state of the RNN.
         - cell_type: What type of RNN to use; either 'rnn' or 'lstm'.
@@ -137,7 +137,14 @@ class CaptioningRNN(object):
         # defined above to store loss and gradients; grads[k] should give the      #
         # gradients for self.params[k].                                            #
         ############################################################################
-        pass
+        
+        
+        vi = features.dot(W_proj) + b_proj
+        words_embed,_ = word_embedding_forward(captions, W_embed)
+        captions_t,_ = rnn_forward(words_embed, vi, Wx, Wh, b)
+        scores,_ = temporal_affine_forward(captions_t, W_vocab, b_vocab)
+        loss, grads = temporal_softmax_loss(scores, captions, mask)
+        
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################

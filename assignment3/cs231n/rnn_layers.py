@@ -165,20 +165,21 @@ def rnn_backward(dh, cache):
     dWx = np.zeros(cache[0]['Wx'].shape)
     dWh = np.zeros(cache[0]['Wh'].shape)
     db = np.zeros(cache[0]['b'].shape)
+    dht = np.zeros(cache[0]['prev_h'].shape)
     
-    for t in np.arange(T-1,0,-1):
-        dxt, dht, dWxt, dWht, dbt = rnn_step_backward(dh[:,t,:], cache[t])
+    #dh = np.swapaxes(dh, 0, 1) # T x N x D
+    
+    for t in np.arange(T-1,-1,-1):
+        dh_current = dh[:,t,:] + dht
+        dxt, dht, dWxt, dWht, dbt = rnn_step_backward(dh_current, cache[t])
         
+        #print(t, dxt.shape, dx.shape)
         dx[:,t,:] += dxt
-        #dh[:,t-1,:] += dht
+        dh0 = dht
         dWx += dWxt
         dWh += dWht
         db += dbt
-    
-    dxt, dh0, dWx, dWh, db = rnn_step_backward(dh[:,1,:], cache[1])
-    
-    #dh0 = dh[:,0,:]   
-    
+        
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -206,7 +207,12 @@ def word_embedding_forward(x, W):
     #                                                                            #
     # HINT: This can be done in one line using NumPy's array indexing.           #
     ##############################################################################
-    pass
+    N, T = x.shape
+    V, D = W.shape
+    out = np.zeros(shape=(N, T, D))
+    out = W[x,:]
+    cache = {'x': x,
+            'W': W}
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -235,7 +241,20 @@ def word_embedding_backward(dout, cache):
     # Note that Words can appear more than once in a sequence.                   #
     # HINT: Look up the function np.add.at                                       #
     ##############################################################################
-    pass
+    
+    x = cache['x']
+    N, T = x.shape
+    V, D = cache['W'].shape
+    
+    #print(x[0,1])
+    #print(dout[0, 1, :])
+    
+    dW = np.zeros(cache['W'].shape)
+    #for n in range(N):
+     #   for t in range(T):
+      #      np.add.at(dW, x[n,t], dout[n, t, :])
+    ##### || same as ######
+    np.add.at(dW, x, dout)
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
