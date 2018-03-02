@@ -243,12 +243,7 @@ def word_embedding_backward(dout, cache):
     ##############################################################################
     
     x = cache['x']
-    N, T = x.shape
-    V, D = cache['W'].shape
-    
-    #print(x[0,1])
-    #print(dout[0, 1, :])
-    
+
     dW = np.zeros(cache['W'].shape)
     #for n in range(N):
      #   for t in range(T):
