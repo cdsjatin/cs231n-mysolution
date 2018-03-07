@@ -143,7 +143,10 @@ class CaptioningRNN(object):
         #2
         words_embed, cache_word = word_embedding_forward(captions_in, W_embed)
         #3
-        captions_t,cache_rnn = rnn_forward(words_embed, vi, Wx, Wh, b)
+        if self.cell_type == 'rnn':
+            captions_t,cache_rnn = rnn_forward(words_embed, vi, Wx, Wh, b)
+        elif self.cell_type == 'lstm':
+            captions_t, cache_lstm = lstm_forward(words_embed, vi, Wx, Wh, b)
         #4
         scores,cache_taff = temporal_affine_forward(captions_t, W_vocab, b_vocab)
         #5
@@ -152,7 +155,10 @@ class CaptioningRNN(object):
         #4-b
         dh, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(grad, cache_taff)
         #3-b
-        dcaptions, dvi, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dh, cache_rnn)
+        if self.cell_type == 'rnn':
+            dcaptions, dvi, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dh, cache_rnn)
+        elif self.cell_type == 'lstm':
+            dcaptions, dvi, grads['Wx'], grads['Wh'], grads['b'] = lstm_backward(dh, cache_lstm)
         #2-b
         grads['W_embed'] = word_embedding_backward(dcaptions, cache_word)
         #1-b
@@ -227,7 +233,7 @@ class CaptioningRNN(object):
         #print(N)
         # _start contains the index of the current word
         current_word = self._start * np.ones((N,),dtype=np.int32) # returns (N,)
-        
+        _c = np.zeros((N,prev_h.shape[1]))
         #print(current_word.shape)
         #print(W_embed.shape)
         
@@ -238,7 +244,12 @@ class CaptioningRNN(object):
             
             word_feature = W_embed[current_word, :] # returns (NxD)
             #print(word_feature.shape)
-            next_h,_ = rnn_step_forward(word_feature, prev_h, Wx, Wh, b) # (NxH)
+            
+            if self.cell_type == 'rnn':
+                next_h,_ = rnn_step_forward(word_feature, prev_h, Wx, Wh, b) # (NxH)
+            elif self.cell_type == 'lstm':
+                next_h,_c,_ = lstm_step_forward(word_feature, prev_h, _c, Wx, Wh, b)
+           
             #print(next_h.shape)
             scores,_ = affine_forward(next_h, W_vocab, b_vocab) # returns (NxV)
             prev_h = next_h
